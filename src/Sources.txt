@@ -1,0 +1,4 @@
+Project sources:
+
+Transformation matrices : https://thecodingtrain.com/challenges/113-4d-hypercube-aka-tesseract
+Core code : https://github.com/VictorGordan/opengl-tutorials/tree/main/YoutubeOpenGL%2016%20-%20Face%20Culling%20%26%20FPS%20Counter

@@ -12,10 +12,13 @@
 #include"VBO.h"
 #include"EBO.h"
 #include"Camera.h"
+#include"Cube.h"
+#include"Tesseract.h"
 
 /*
 compile with:
-g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Texture.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
+g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Texture.cpp Cube.cpp Tesseract.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
+TODO: dodaj i Mat5.cpp u compile komandu
 */
 
 
@@ -23,36 +26,21 @@ const unsigned int width = 800;
 const unsigned int height = 800;
 float FOV = 90.0f; // default is 45.0f
 
-// CUBE
-GLfloat vertices[] =
-{ //     COORDINATES     /       COLORS 
-	 1.0f,  1.0f,  1.0f,	1.0f,  0.0f,  0.0f,
-	 1.0f,  1.0f, -1.0f,	0.0f,  1.0f,  0.0f,
-	 1.0f, -1.0f,  1.0f,	0.0f, 0.0f, 1.0f,
-	 1.0f, -1.0f, -1.0f,	1.0f, 1.0f, 1.0f,
-	-1.0f,  1.0f,  1.0f,	1.0f, 1.0f, 1.0f,
-	-1.0f,  1.0f, -1.0f,	1.0f, 0.0f, 0.0f,
-	-1.0f, -1.0f,  1.0f,	1.0f, 1.0f, 1.0f,
-	-1.0f, -1.0f, -1.0f,	1.0f, 0.0f, 1.0f
-};
+/* 
+	TODO: ..... 4d .....
+	TODO matrica projekcije
+	TODO pritiskom strelice prema gore / dole pomice se projekcija u prostoru
+	TODO matrice rotacije za xy zw itd ravnine
 
-// CUBE wireframe indices
-GLuint indices[] =
-{
-	0, 1,
-	0, 2,
-	0, 4,	
-	5, 1,
-	5, 4,
-	5, 7,
-	6, 2,
-	6, 4,
-	6, 7,
-	3, 1,
-	3, 2,
-	3, 7
-};
+	? Ideje:
+		* LERP boja na teseraktu??
+		* Pomicanje objekata pomoću praćenja miša
 
+	VAO, VBO, EBO:
+		- 1 VAO za sve objekte istog tipa (koji imaju jednako elemenata i isto raspoređene boje i pozicije itd) - npr 1 VAO za sve kocke u sceni
+		- 1 VBO po objektu - npr ako imam 2 teserakta svaki ce imat zaseban VBO
+		- 1 EBO za sve objekte istog tipa (kao i VAO)
+*/
 
 int main()	
 {
@@ -67,50 +55,49 @@ int main()
 	// So that means we only have the modern functions
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
 	GLFWwindow* window = glfwCreateWindow(width, height, "Tester", NULL, NULL);
-	// Error check if the window fails to create
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
-	// Introduce the window into the current context
 	glfwMakeContextCurrent(window);
 
 	//Load GLAD so it configures OpenGL
 	gladLoadGL();
-	// Specify the viewport of OpenGL in the Window
-	// In this case the viewport goes from x = 0, y = 0, to x = 800, y = 800
-	glViewport(0, 0, width, height);
 
+	glViewport(0, 0, width, height);
 
 	// Generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
 
+						// Cube:
+	Cube cube;
 
-	// Generates Vertex Array Object and binds it
-	VAO VAO1;
-	VAO1.Bind();
+	VAO VAO_cube;
+	VAO_cube.Bind();
 
-	// Generates Vertex Buffer Object and links it to vertices
-	VBO VBO1(vertices, sizeof(vertices));
-	// Generates Element Buffer Object and links it to indices
-	EBO EBO1(indices, sizeof(indices));
+	VBO VBO_cube;
+	cube.updateVertexData(VBO_cube); // also binds and unbinds VBO
 
-	// Links VBO attributes such as coordinates and colors to VAO
-	VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
-	VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	// Unbind all to prevent accidentally modifying them
-	VAO1.Unbind();
-	VBO1.Unbind();
-	EBO1.Unbind();
+	EBO EBO_cube(cube.wireframeIndices, sizeof(cube.wireframeIndices));
+
+	// coordinates (location = 0) and colors (location =  1) to VAO
+	VAO_cube.LinkAttrib(VBO_cube, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
+	VAO_cube.LinkAttrib(VBO_cube, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+	// Unbind all to prevent accidentally modifying them (VBO is already unbound)
+	VAO_cube.Unbind();
+	EBO_cube.Unbind(); 
+
+						// Tesseract: 
+	Tesseract tesseract;
+
 
 	// Enables the Depth Buffer
 	glEnable(GL_DEPTH_TEST);
 
-	// Creates camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 4.0f));
 
 	// for displaying FPS
@@ -155,11 +142,17 @@ int main()
 		camera.Inputs(window);
 		// Updates and exports the camera matrix to the Vertex Shader
 		camera.Matrix(FOV, 0.1f, 100.0f, shaderProgram, "camMatrix");
+		
+		// Object manipulation
+		cube.rotate(0.05, 'x');
+		cube.rotate(0.05, 'y');
+		cube.rotate(0.05, 'z');
+		cube.updateVertexData(VBO_cube);
 
 		// Bind the VAO so OpenGL knows to use it
-		VAO1.Bind();
+		VAO_cube.Bind();
 		// Draw primitives, number of indices, datatype of indices, index of indices
-		glDrawElements(GL_LINES, sizeof(indices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_LINES, sizeof(cube.wireframeIndices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
 		// Swap the back buffer with the front buffer
 		glfwSwapBuffers(window);
 		// Take care of all GLFW events
@@ -169,9 +162,9 @@ int main()
 
 
 	// Delete all the objects we've created
-	VAO1.Delete();
-	VBO1.Delete();
-	EBO1.Delete();
+	VAO_cube.Delete();
+	VBO_cube.Delete();
+	EBO_cube.Delete();
 	shaderProgram.Delete();
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
