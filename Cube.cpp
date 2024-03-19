@@ -16,6 +16,8 @@ Cube::Cube()
     GLfloat defaultColors[24];
 	std::fill(defaultColors, defaultColors + 24, 1.0);
 
+    position = glm::vec3(0.0f, 0.0f, 0.0f);
+
     setPositions(defaultPositions);
     setColors(defaultColors);
 }
@@ -42,9 +44,16 @@ void Cube::updateVertexData(VBO& VBO)
     VBO.Update(combinedData, sizeof(combinedData), GL_DYNAMIC_DRAW);
 }
 
-void Cube::translate(glm::vec3 newPosition)
+void Cube::translate(float x, float y, float z)
 {
-	vertexPositions[0] += 0.02;
+    position = glm::vec3(x, y, z);
+    
+    for (int i = 0; i < 24; i += 3)
+    {
+        vertexPositions[i]   += x;
+        vertexPositions[i+1] += y;
+        vertexPositions[i+2] += z;
+    }
 }
 
 void Cube::rotate(float angleDegrees, char rotationID)
@@ -76,10 +85,14 @@ void Cube::rotate(float angleDegrees, char rotationID)
 
     for (int i = 0; i < 24; i += 3)
     {
-        glm::vec3 vec = glm::vec3(vertexPositions[i], vertexPositions[i+1], vertexPositions[i+2]);
+        float x = vertexPositions[i] - position.x;
+        float y = vertexPositions[i+1] - position.y;
+        float z = vertexPositions[i+2] - position.z;
 
-        vertexPositions[i]   = glm::dot(matrix[0], vec);
-        vertexPositions[i+1] = glm::dot(matrix[1], vec);
-        vertexPositions[i+2] = glm::dot(matrix[2], vec);
+        glm::vec3 vec = glm::vec3(x, y, z);
+
+        vertexPositions[i]   = glm::dot(matrix[0], vec) + position.x;
+        vertexPositions[i+1] = glm::dot(matrix[1], vec) + position.y;
+        vertexPositions[i+2] = glm::dot(matrix[2], vec) + position.z;
     }
 }

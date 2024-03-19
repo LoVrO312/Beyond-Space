@@ -17,6 +17,7 @@
 class Cube
 {
 public:
+	glm::vec3 position;
     GLfloat vertexPositions[24];
     GLfloat vertexColors[24];
 	GLfloat combinedData[48];
@@ -43,8 +44,8 @@ public:
     void updateVertexData(VBO& VBO);
 
 	// cube manipulation functions
-	void translate(glm::vec3 newPosition);
-    void rotate(float angleRadians, char rotationID);
+	void translate(float x, float y, float z);
+    void rotate(float angleDegrees, char rotationID);
 };
 
 #endif

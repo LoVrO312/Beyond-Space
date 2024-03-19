@@ -1,6 +1,8 @@
 #ifndef TESSERACT_CLASS_H
 #define TESSERACT_CLASS_H
 
+#include<iostream>
+
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
 #include<glm/glm.hpp>
@@ -9,6 +11,9 @@
 #include<glm/gtx/rotate_vector.hpp>
 #include<glm/gtx/vector_angle.hpp>
 
+#include"VAO.h"
+#include"VBO.h"
+#include"EBO.h"
 
 class Tesseract
 {
@@ -16,7 +21,8 @@ class Tesseract
         glm::vec4 pointsPositions[16];
         glm::vec3 pointsColors[16];
         GLfloat projectedVertexAttributes[96];
-        GLfloat wireframeIndices[64]
+        
+        GLuint wireframeIndices[64]
         {
         // Cube 1
             0, 1,
@@ -59,6 +65,10 @@ class Tesseract
         Tesseract(glm::vec4 points[16]); // might not implement 
         Tesseract(glm::vec4 points[16], glm::vec3 colors[16]); // might not implement anything regarding colors
 
+        void updateVertexData(VBO& VBO);
         void display();
+
+        // tesseract manipulation functions
+        void rotate(float angleDegrees, std::string rotationID);
 };
 #endif

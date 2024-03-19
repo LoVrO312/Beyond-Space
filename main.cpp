@@ -17,7 +17,7 @@
 
 /*
 compile with:
-g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Texture.cpp Cube.cpp Tesseract.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
+	g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Texture.cpp Cube.cpp Tesseract.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
 TODO: dodaj i Mat5.cpp u compile komandu
 */
 
@@ -28,13 +28,14 @@ float FOV = 90.0f; // default is 45.0f
 
 /* 
 	TODO: ..... 4d .....
-	TODO matrica projekcije
-	TODO pritiskom strelice prema gore / dole pomice se projekcija u prostoru
-	TODO matrice rotacije za xy zw itd ravnine
+	TODO: spawnas teserakt koristenjem tipke E :: koraci:
+		TODO: static VAO i EBO koji se inicijaliziraju na pocetku
+		TODO: VBO koji se inicijalizira u konstruktoru
+		TODO: (static??) draw funkcija koja koristi update vertex data za VBO 
 
 	? Ideje:
-		* LERP boja na teseraktu??
 		* Pomicanje objekata pomoću praćenja miša
+		* pritiskom strelice prema gore / dole pomice se projekcija u prostoru
 
 	VAO, VBO, EBO:
 		- 1 VAO za sve objekte istog tipa (koji imaju jednako elemenata i isto raspoređene boje i pozicije itd) - npr 1 VAO za sve kocke u sceni
@@ -72,11 +73,13 @@ int main()
 	// Generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
 
+
 						// Cube:
 	Cube cube;
 
 	VAO VAO_cube;
 	VAO_cube.Bind();
+	cube.translate(-2.0f, 0.0f, -2.0f);
 
 	VBO VBO_cube;
 	cube.updateVertexData(VBO_cube); // also binds and unbinds VBO
@@ -91,8 +94,23 @@ int main()
 	VAO_cube.Unbind();
 	EBO_cube.Unbind(); 
 
+
 						// Tesseract: 
 	Tesseract tesseract;
+
+	VAO VAO_tes;
+	VAO_tes.Bind();
+
+	VBO VBO_tes;
+	tesseract.updateVertexData(VBO_tes);
+
+	EBO EBO_tes(tesseract.wireframeIndices, sizeof(tesseract.wireframeIndices));
+
+	VAO_tes.LinkAttrib(VBO_tes, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
+	VAO_tes.LinkAttrib(VBO_tes, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+	VAO_tes.Unbind();
+	EBO_tes.Unbind();
 
 
 	// Enables the Depth Buffer
@@ -135,24 +153,30 @@ int main()
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
 		// Clean the back buffer and depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// Tell OpenGL which Shader Program we want to use
+
 		shaderProgram.Activate();
 
-		// Handles camera inputs
 		camera.Inputs(window);
-		// Updates and exports the camera matrix to the Vertex Shader
 		camera.Matrix(FOV, 0.1f, 100.0f, shaderProgram, "camMatrix");
 		
-		// Object manipulation
+
+				// Cube manipulation
 		cube.rotate(0.05, 'x');
 		cube.rotate(0.05, 'y');
 		cube.rotate(0.05, 'z');
 		cube.updateVertexData(VBO_cube);
-
-		// Bind the VAO so OpenGL knows to use it
 		VAO_cube.Bind();
-		// Draw primitives, number of indices, datatype of indices, index of indices
 		glDrawElements(GL_LINES, sizeof(cube.wireframeIndices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
+
+
+				// Tesseract manipulation
+		tesseract.rotate(0.15, "xy");
+		tesseract.rotate(0.15, "yz");
+		tesseract.rotate(0.15, "wz");
+		tesseract.updateVertexData(VBO_tes);
+		VAO_tes.Bind();
+		glDrawElements(GL_LINES, sizeof(tesseract.wireframeIndices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
+
 		// Swap the back buffer with the front buffer
 		glfwSwapBuffers(window);
 		// Take care of all GLFW events
@@ -165,7 +189,13 @@ int main()
 	VAO_cube.Delete();
 	VBO_cube.Delete();
 	EBO_cube.Delete();
+
+	VAO_tes.Delete();
+	VBO_tes.Delete();
+	EBO_tes.Delete();
+	
 	shaderProgram.Delete();
+
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
 	// Terminate GLFW before ending the program

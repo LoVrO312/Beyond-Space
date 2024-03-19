@@ -10,6 +10,7 @@
 #include<glm/gtx/vector_angle.hpp>
 
 #include"shaderClass.h"
+#include"Tesseract.h"
 
 class Camera
 {
