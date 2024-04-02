@@ -4,17 +4,9 @@
 #include <cstdlib>
 #include <ctime>
 
-Tesseract::Tesseract()
-{   // generates all permutations of vec4 containing 1s and 0s so we get a tesseract where side length a = 1.0
-        
-    int t = 0;
-    for (int i = -1; i <= 1; i += 2)
-        for (int j = -1; j <= 1; j += 2)
-            for (int k = -1; k <= 1; k += 2)
-                for (int l = -1; l <= 1; l += 2)
-                {
-                    pointsPositions[t++] = glm::vec4((float)l, (float)k, (float)j, (float)i);
-                }
+Tesseract::Tesseract(float posX, float posY, float posZ)
+{
+    worldPosition = glm::vec3(posX, posY, posZ);
     
     for (int i = 0; i < 8; i++)
     {
@@ -25,43 +17,48 @@ Tesseract::Tesseract()
         pointsPositions[i] = glm::vec4((i & 1) ? 1.0f : -1.0f, (i & 2) ? 1.0f : -1.0f, (i & 4) ? 1.0f : -1.0f, -1.0f);
     }
 
-    // ! Original code
-    // for (int i = 0; i < 16; i++)
-    //     pointsColors[i] = glm::vec3(1.0f, 1.0f, 1.0f);
-
     srand(time(nullptr));
 
     // Generate random colors for each vertex
     for (int i = 0; i < 16; i++)
     {
-        float r = static_cast<float>(rand()) / RAND_MAX; // Random value between 0 and 1 for red component
-        float g = static_cast<float>(rand()) / RAND_MAX; // Random value between 0 and 1 for green component
-        float b = static_cast<float>(rand()) / RAND_MAX; // Random value between 0 and 1 for blue component
+        float r = static_cast<float>(rand()) / RAND_MAX;
+        float g = static_cast<float>(rand()) / RAND_MAX;
+        float b = static_cast<float>(rand()) / RAND_MAX;
         pointsColors[i] = glm::vec3(r, g, b);
     }
+
+
+    // VAO VBO EBO linking and initialization:
+	VAO_tes.Bind();
+	updateVertexData(VBO_tes);
+
+    EBO_tes = new EBO(wireframeIndices, sizeof(wireframeIndices));
+
+	VAO_tes.LinkAttrib(VBO_tes, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
+	VAO_tes.LinkAttrib(VBO_tes, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+	VAO_tes.Unbind();
+	EBO_tes->Unbind();
+    
 }
 
 Tesseract::Tesseract(glm::vec4 points[16])
 {   
     for(int i = 0; i <= 15; i++)
     {
-        this->pointsPositions[i] = points[i];
-        this->pointsColors[i] = glm::vec3(1.0f, 1.0f, 1.0f);
+        pointsPositions[i] = points[i];
+        pointsColors[i] = glm::vec3(1.0f, 1.0f, 1.0f);
     }
 }
 
-Tesseract::Tesseract(glm::vec4 points[16], glm::vec3 colors[16])
+Tesseract* Tesseract::createNewTesseract(float posX, float posY, float posZ)
 {
-    for(int i = 0; i <= 15; i++)
-    {
-        this->pointsPositions[i] = points[i];
-        this->pointsColors[i] = colors[i];
-    }
+    Tesseract* tesseract = new Tesseract(posX, posY, posZ);
+    tesseract->draw();
+    return tesseract; 
 }
 
-
-// TODO mozda napraviti novi VBO za svaki a da dijele EBO i VAO kako bi mogao puno njih spawnati u isto vrijeme
-// TODO dinamicki ih alocirati pomocu tipke i onda deletati kad stisnemo delete il nes
 void Tesseract::updateVertexData(VBO& VBO)
 {
     float distance = 2;
@@ -70,10 +67,10 @@ void Tesseract::updateVertexData(VBO& VBO)
     {
         k = 1 / (distance - pointsPositions[i].w);
 
-        // perspective projection of point into 3D
-        projectedVertexAttributes[j]     = pointsPositions[i].x * k;
-        projectedVertexAttributes[j + 1] = pointsPositions[i].y * k;
-        projectedVertexAttributes[j + 2] = pointsPositions[i].z * k;
+        // perspective projection of point into 3D and adding position offset from origin
+        projectedVertexAttributes[j]     = pointsPositions[i].x * k + worldPosition.x;
+        projectedVertexAttributes[j + 1] = pointsPositions[i].y * k + worldPosition.y;
+        projectedVertexAttributes[j + 2] = pointsPositions[i].z * k + worldPosition.z;
 
         // giving point colors
         projectedVertexAttributes[j + 3] = pointsColors[i].x;
@@ -83,6 +80,13 @@ void Tesseract::updateVertexData(VBO& VBO)
     }
     VBO.Update(projectedVertexAttributes, sizeof(projectedVertexAttributes), GL_DYNAMIC_DRAW);
 
+}
+
+void Tesseract::draw()
+{
+    updateVertexData(VBO_tes);
+	VAO_tes.Bind();
+    glDrawElements(GL_LINES, sizeof(wireframeIndices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
 }
 
 void Tesseract::rotate(float angleDegrees, std::string rotationID)
@@ -101,9 +105,9 @@ void Tesseract::rotate(float angleDegrees, std::string rotationID)
     }
     else if (rotationID == "yw" || rotationID == "wy")
     {
-        matrix[0] = glm::vec4(cos,  0,  sin, 0);
+        matrix[0] = glm::vec4(cos,  0,  -sin, 0);
         matrix[1] = glm::vec4(0,    1,   0, 0);
-        matrix[2] = glm::vec4(-sin, 0,  cos, 0);
+        matrix[2] = glm::vec4(sin, 0,  cos, 0);
         matrix[3] = glm::vec4(0,    0,   0, 1);
     }
     else if (rotationID == "zw" || rotationID == "wz")
@@ -158,3 +162,4 @@ void Tesseract::rotate(float angleDegrees, std::string rotationID)
     }
 
 }
+

@@ -1,16 +1,14 @@
 #include"Camera.h"
 
-// if you want to use left click to move the mouse around uncomment the commented code in mouse inputs
-
-
-Camera::Camera(int width, int height, glm::vec3 position)
+Camera::Camera(int width, int height, glm::vec3 position, float FOVdeg)
 {
 	Camera::width = width;
 	Camera::height = height;
 	Position = position;
+	this->FOVdeg = FOVdeg;
 }
 
-void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader& shader, const char* uniform)
+void Camera::Matrix(float nearPlane, float farPlane, Shader& shader, const char* uniform)
 {
 	// Initializes matrices since otherwise they will be the null matrix
 	glm::mat4 view = glm::mat4(1.0f);
@@ -25,9 +23,7 @@ void Camera::Matrix(float FOVdeg, float nearPlane, float farPlane, Shader& shade
 	glUniformMatrix4fv(glGetUniformLocation(shader.ID, uniform), 1, GL_FALSE, glm::value_ptr(projection * view));
 }
 
-
-
-void Camera::Inputs(GLFWwindow* window)
+void Camera::InputsAndDraws(GLFWwindow* window)
 {
 	// Handles key inputs
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -68,28 +64,81 @@ void Camera::Inputs(GLFWwindow* window)
 		glfwSetWindowShouldClose(window, true);
 	}
 	// reset camera position to start
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
 	{
 		Position = glm::vec3(0.0f, 0.0f, 4.0f);
 	}
-	// enables/disables wireframe mode
+	// Change FOV
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		FOVdeg += 0.1f;
+	}
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		FOVdeg -= 0.1f;
+	}
+
+	// spawns tesseract ~2 meters in front of camera
 	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !previousTKeyState)
     {
-        // Toggle wireframe mode
-        wireframe = !wireframe;
-        if (wireframe)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode
-        else
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode
+		glm::vec3 tesseractPosition = Position + 2.0f * Orientation;
+        Tesseract* tesseract = Tesseract::createNewTesseract(tesseractPosition.x, tesseractPosition.y, tesseractPosition.z);
+		tesseracts.push_back(tesseract);
     }
-
     previousTKeyState = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+
+	// toggle tesseracts rotation
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !previousRKeyState)
+    {
+		rotateTesseracts = !rotateTesseracts;
+    }
+    previousRKeyState = glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
 	
+	if (glfwGetKey(window, GLFW_KEY_DELETE) == GLFW_PRESS)
+	{
+		for (auto tess : tesseracts)
+			delete tess;
 
+		tesseracts.clear();
+	}
 
-	// Handles mouse inputs
-	// if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-	// {
+	// rotation toggling
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !previousKeyStates[0])
+    {
+		rotation[0] = !rotation[0];
+    }
+	previousKeyStates[0] = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
+
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && !previousKeyStates[1])
+	{
+		rotation[1] = !rotation[1];
+	}
+	previousKeyStates[1] = glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
+
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && !previousKeyStates[2])
+	{
+		rotation[2] = !rotation[2];
+	}
+	previousKeyStates[2] = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
+
+	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && !previousKeyStates[3])
+	{
+		rotation[3] = !rotation[3];
+	}
+	previousKeyStates[3] = glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS;
+
+	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && !previousKeyStates[4])
+	{
+		rotation[4] = !rotation[4];
+	}
+	previousKeyStates[4] = glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS;
+
+	if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS && !previousKeyStates[5])
+	{
+		rotation[5] = !rotation[5];
+	}
+	previousKeyStates[5] = glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS;
+
 		// Hides mouse cursor
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
@@ -125,12 +174,24 @@ void Camera::Inputs(GLFWwindow* window)
 
 		// Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
 		glfwSetCursorPos(window, (width / 2), (height / 2));
-	// }
-	// else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)
-	// {
-	// 	// Unhides cursor since camera is not looking around anymore
-	// 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-	// 	// Makes sure the next time the camera looks around it doesn't jump
-	// 	firstClick = true;
-	// }
+
+	for (auto tess : tesseracts)
+	{	
+		if (rotateTesseracts)
+		{
+			if (rotation[0])
+				tess->rotate(0.08f, "xw");
+			if (rotation[1])
+				tess->rotate(0.08f, "yw");
+			if (rotation[2])
+				tess->rotate(0.08f, "zw");
+			if (rotation[3])
+				tess->rotate(0.08f, "xy");
+			if (rotation[4])	
+				tess->rotate(0.08f, "yz");
+			if (rotation[5])	
+				tess->rotate(0.08f, "xz");	
+		}
+		tess->draw();
+	}
 }

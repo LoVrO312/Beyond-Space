@@ -18,11 +18,15 @@
 class Tesseract
 {
     public:
+        glm::vec3 worldPosition;
         glm::vec4 pointsPositions[16];
         glm::vec3 pointsColors[16];
         GLfloat projectedVertexAttributes[96];
         
-        GLuint wireframeIndices[64]
+        VBO VBO_tes;
+        VAO VAO_tes;
+        
+        GLuint wireframeIndices[64] =
         {
         // Cube 1
             0, 1,
@@ -61,12 +65,17 @@ class Tesseract
             7, 15
         };
 
-        Tesseract(); // generates all permutations of 1s and 0s so we get a tesseract where side length a = 1.0
-        Tesseract(glm::vec4 points[16]); // might not implement 
-        Tesseract(glm::vec4 points[16], glm::vec3 colors[16]); // might not implement anything regarding colors
+        EBO* EBO_tes;
+
+        // generates all permutations of 1s and -1s so we get a tesseract where side length a = 2.0
+        Tesseract(float posX, float posY, float posZ); 
+        // U pravilu mozemo napraviti bilo kakav 4-dimenzionalni objekt koji ima 16 tocaka 
+        Tesseract(glm::vec4 points[16]);
+
+        static Tesseract* createNewTesseract(float posX, float posY, float posZ);
 
         void updateVertexData(VBO& VBO);
-        void display();
+        void draw();
 
         // tesseract manipulation functions
         void rotate(float angleDegrees, std::string rotationID);

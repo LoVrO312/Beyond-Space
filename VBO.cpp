@@ -25,8 +25,6 @@ void VBO::Unbind()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-// ! Performance may be better if i stop constantly binding and unbinding the VBO?
-// ! but then i would have to be careful to unbind it manually if i have multiple VBOs
 // Update the data
 void VBO::Update(GLfloat* vertices, GLsizeiptr size, GLuint drawType)
 {

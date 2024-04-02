@@ -6,7 +6,6 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
 
-#include"Texture.h"
 #include"shaderClass.h"
 #include"VAO.h"
 #include"VBO.h"
@@ -16,39 +15,48 @@
 #include"Tesseract.h"
 
 /*
-compile with:
-	g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Texture.cpp Cube.cpp Tesseract.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
-TODO: dodaj i Mat5.cpp u compile komandu
+! compile with:
+g++ -std=c++17 Main.cpp Camera.cpp EBO.cpp VAO.cpp VBO.cpp shaderClass.cpp stb.cpp Cube.cpp Tesseract.cpp src/glad.c -I./include -L./lib -lglfw3dll -o out.exe
+
+			! Controls:
+	W, A, S, D, SPACE, LCTRL - movement
+	LSHIFT - increase movement speed
+	ESC - close window
+	
+	R - toggle tesseract rotation
+	O - set camera position to world origin
+	T - spawn tesseract
+	delete - delete all tesseracts
+
+	1 - toggle rotation around xw plane
+	2 - toggle rotation around yw plane
+	3 - toggle rotation around zw plane
+	4 - toggle rotation around xy plane
+	5 - toggle rotation around yz plane
+	6 - toggle rotation around xz plane
+
+	arrow key up - increase FOV
+	arrow key down - decrease FOV
+
+Source:
+	template code is from Victor Gordan's introduction to OpenGL
+	https://github.com/VictorGordan/opengl-tutorials/tree/main/YoutubeOpenGL%2016%20-%20Face%20Culling%20%26%20FPS%20Counter
 */
 
+// settings
+const unsigned int width = 1920;
+const unsigned int height = 1080;
+float FOV = 60.0f; // default is 45.0f
+glm::vec3 backgroundColor = glm::vec3(0.14f, 0.26f, 0.34f); // default is (0.07f, 0.13f, 0.17f)
 
-const unsigned int width = 800;
-const unsigned int height = 800;
-float FOV = 90.0f; // default is 45.0f
 
-/* 
-	TODO: ..... 4d .....
-	TODO: spawnas teserakt koristenjem tipke E :: koraci:
-		TODO: static VAO i EBO koji se inicijaliziraju na pocetku
-		TODO: VBO koji se inicijalizira u konstruktoru
-		TODO: (static??) draw funkcija koja koristi update vertex data za VBO 
 
-	? Ideje:
-		* Pomicanje objekata pomoću praćenja miša
-		* pritiskom strelice prema gore / dole pomice se projekcija u prostoru
-
-	VAO, VBO, EBO:
-		- 1 VAO za sve objekte istog tipa (koji imaju jednako elemenata i isto raspoređene boje i pozicije itd) - npr 1 VAO za sve kocke u sceni
-		- 1 VBO po objektu - npr ako imam 2 teserakta svaki ce imat zaseban VBO
-		- 1 EBO za sve objekte istog tipa (kao i VAO)
-*/
-
-int main()	
+int main()
 {
 	// Initialize GLFW
 	glfwInit();
 
-	// Tell GLFW what version of OpenGL we are using 
+	// Tell GLFW what version of OpenGL we are using
 	// In this case we are using OpenGL 3.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -76,7 +84,7 @@ int main()
 
 						// Cube:
 	Cube cube;
-
+	
 	VAO VAO_cube;
 	VAO_cube.Bind();
 	cube.translate(-2.0f, 0.0f, -2.0f);
@@ -96,7 +104,7 @@ int main()
 
 
 						// Tesseract: 
-	Tesseract tesseract;
+	Tesseract tesseract(2.0f, 0.0f, -2.0f);
 
 	VAO VAO_tes;
 	VAO_tes.Bind();
@@ -116,7 +124,7 @@ int main()
 	// Enables the Depth Buffer
 	glEnable(GL_DEPTH_TEST);
 
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 4.0f));
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 4.0f), FOV);
 
 	// for displaying FPS
 	double prevTime = 0.0;
@@ -150,14 +158,14 @@ int main()
 		}
 
 		// Specify the color of the background
-		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0f);
 		// Clean the back buffer and depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shaderProgram.Activate();
 
-		camera.Inputs(window);
-		camera.Matrix(FOV, 0.1f, 100.0f, shaderProgram, "camMatrix");
+		camera.InputsAndDraws(window);
+		camera.Matrix(0.1f, 100.0f, shaderProgram, "camMatrix");
 		
 
 				// Cube manipulation
@@ -170,9 +178,10 @@ int main()
 
 
 				// Tesseract manipulation
-		tesseract.rotate(0.15, "xy");
-		tesseract.rotate(0.15, "yz");
-		tesseract.rotate(0.15, "wz");
+		tesseract.rotate(0.08, "xy");
+		// tesseract.rotate(0.08, "yz");
+		// tesseract.rotate(0.08, "zw");
+		// tesseract.rotate(0.08, "yw");
 		tesseract.updateVertexData(VBO_tes);
 		VAO_tes.Bind();
 		glDrawElements(GL_LINES, sizeof(tesseract.wireframeIndices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
